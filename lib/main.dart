@@ -4,6 +4,7 @@
 // #enddocregion ShakeCurve
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:async';
 
 void main() => runApp(const HelloWorldApp());
 
@@ -42,7 +43,7 @@ class _KeyboardMonitorState extends State<KeyboardMonitor> {
   void _keyboardCallback(RawKeyEvent keyEvent) {
     if (keyEvent is! RawKeyDownEvent) return;
 
-    widget.onKeyPress(keyEvent.logicalKey.toString());
+    widget.onKeyPress(keyEvent.logicalKey.keyLabel);
   }
 }
 
@@ -57,12 +58,43 @@ class _KeyPressComponentState extends State<KeyPressComponent> {
   // change to false, if you navigated to another page or opened a dialog.
   String? _lastKeyPress = "Waiting for key press. . . ";
 
+  Timer? _flashTimer;
+  Color _buttonColor = Colors.transparent;
+
+  void runFlashTimer() {
+    const flashTime = Duration(milliseconds: 100);
+
+    if (_flashTimer != null && _flashTimer!.isActive) {
+      return;
+    }
+
+    _flashTimer = Timer.periodic(flashTime, flashButton);
+    flashButton(_flashTimer);
+  }
+
+  void flashButton(timer) {
+    if (_buttonColor == Colors.transparent) {
+      _buttonColor = Colors.red;
+    } else {
+      _buttonColor = Colors.transparent;
+      timer.cancel();
+    }
+    setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _flashTimer!.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return KeyboardMonitor(
       onKeyPress: (String? key) {
         setState(() {
           _lastKeyPress = key;
+          runFlashTimer();
         });
       },
       child: Column(children: [
@@ -72,7 +104,13 @@ class _KeyPressComponentState extends State<KeyPressComponent> {
         const Text("Keyboard Monitor",
             style: TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 30),
-        Text(_lastKeyPress!)
+        Text(_lastKeyPress!),
+        const SizedBox(height: 30),
+        Container(
+            width: 60,
+            height: 60,
+            decoration:
+                BoxDecoration(shape: BoxShape.circle, color: _buttonColor))
       ]),
     );
   }
